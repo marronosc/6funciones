@@ -74,21 +74,32 @@
             <div class="analysis-card">
                 <h4>Palabras más comunes</h4>
                 <div class="word-cloud">
-                    {% set words = [] %}
+                    {% set all_words = [] %}
                     {% for suggestion in result.suggestions %}
                         {% for word in suggestion.split() %}
-                            {% if word|length > 3 and word.lower() not in ['para', 'como', 'cómo', 'hacer', 'tutorial', 'the', 'and', 'with', 'for'] %}
-                                {% set _ = words.append(word.lower()) %}
+                            {% if word|length > 3 %}
+                                {% set word_lower = word.lower() %}
+                                {% if word_lower not in ['para', 'como', 'cómo', 'hacer', 'tutorial', 'the', 'and', 'with', 'for', 'yoga'] %}
+                                    {% set _ = all_words.append(word_lower) %}
+                                {% endif %}
                             {% endif %}
                         {% endfor %}
                     {% endfor %}
+                    
                     {% set word_counts = {} %}
-                    {% for word in words %}
-                        {% set _ = word_counts.update({word: word_counts.get(word, 0) + 1}) %}
+                    {% for word in all_words %}
+                        {% if word in word_counts %}
+                            {% set _ = word_counts.update({word: word_counts[word] + 1}) %}
+                        {% else %}
+                            {% set _ = word_counts.update({word: 1}) %}
+                        {% endif %}
                     {% endfor %}
+                    
                     {% set sorted_words = word_counts.items() | sort(attribute='1', reverse=true) %}
-                    {% for word, count in sorted_words[:10] %}
-                        <span class="word-tag">{{ word }} ({{ count }})</span>
+                    {% for word, count in sorted_words[:8] %}
+                        {% if count > 1 %}
+                            <span class="word-tag">{{ word }} ({{ count }})</span>
+                        {% endif %}
                     {% endfor %}
                 </div>
             </div>
@@ -96,10 +107,30 @@
             <div class="analysis-card">
                 <h4>Tipos de contenido sugeridos</h4>
                 <div class="content-types">
-                    {% set tutorial_count = result.suggestions | select('search', 'tutorial|cómo|como|how to') | list | length %}
-                    {% set review_count = result.suggestions | select('search', 'review|reseña|opinión') | list | length %}
-                    {% set vs_count = result.suggestions | select('search', 'vs|versus|comparar') | list | length %}
-                    {% set best_count = result.suggestions | select('search', 'mejor|best|top') | list | length %}
+                    {% set tutorial_count = 0 %}
+                    {% set review_count = 0 %}
+                    {% set vs_count = 0 %}
+                    {% set best_count = 0 %}
+                    {% set day_count = 0 %}
+                    
+                    {% for suggestion in result.suggestions %}
+                        {% set suggestion_lower = suggestion.lower() %}
+                        {% if 'tutorial' in suggestion_lower or 'cómo' in suggestion_lower or 'como' in suggestion_lower or 'how to' in suggestion_lower or 'paso a paso' in suggestion_lower %}
+                            {% set tutorial_count = tutorial_count + 1 %}
+                        {% endif %}
+                        {% if 'review' in suggestion_lower or 'reseña' in suggestion_lower or 'opinión' in suggestion_lower %}
+                            {% set review_count = review_count + 1 %}
+                        {% endif %}
+                        {% if 'vs' in suggestion_lower or 'versus' in suggestion_lower or 'comparar' in suggestion_lower %}
+                            {% set vs_count = vs_count + 1 %}
+                        {% endif %}
+                        {% if 'mejor' in suggestion_lower or 'best' in suggestion_lower or 'top' in suggestion_lower %}
+                            {% set best_count = best_count + 1 %}
+                        {% endif %}
+                        {% if 'día' in suggestion_lower or 'dia' in suggestion_lower or 'day' in suggestion_lower or 'días' in suggestion_lower %}
+                            {% set day_count = day_count + 1 %}
+                        {% endif %}
+                    {% endfor %}
                     
                     {% if tutorial_count > 0 %}
                         <div class="content-type">🎓 Tutoriales: {{ tutorial_count }}</div>
@@ -112,6 +143,13 @@
                     {% endif %}
                     {% if best_count > 0 %}
                         <div class="content-type">🏆 Rankings: {{ best_count }}</div>
+                    {% endif %}
+                    {% if day_count > 0 %}
+                        <div class="content-type">📅 Por días: {{ day_count }}</div>
+                    {% endif %}
+                    
+                    {% if tutorial_count == 0 and review_count == 0 and vs_count == 0 and best_count == 0 and day_count == 0 %}
+                        <div class="content-type">📝 Contenido general variado</div>
                     {% endif %}
                 </div>
             </div>
